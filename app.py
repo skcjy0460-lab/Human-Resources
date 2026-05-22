@@ -801,15 +801,34 @@ with tab3:
         "연차발생(일)","연차사용(일)","연차잔여(일)","반차(오전)","반차(오후)","병가(일)"
     ]
 
-    st.dataframe(
+    def color_scale(series, low_hex, high_hex):
+        """matplotlib 없이 min-max 기반 hex 색상 그라디언트 생성"""
+        def hex_to_rgb(h):
+            h = h.lstrip("#")
+            return tuple(int(h[i:i+2], 16) for i in (0, 2, 4))
+        def rgb_to_hex(r, g, b):
+            return f"#{int(r):02x}{int(g):02x}{int(b):02x}"
+        lo = hex_to_rgb(low_hex)
+        hi = hex_to_rgb(high_hex)
+        mn, mx = series.min(), series.max()
+        result = []
+        for v in series:
+            t = (v - mn) / (mx - mn) if mx > mn else 0
+            r = lo[0] + t * (hi[0] - lo[0])
+            g = lo[1] + t * (hi[1] - lo[1])
+            b = lo[2] + t * (hi[2] - lo[2])
+            result.append(f"background-color: {rgb_to_hex(r,g,b)}; color: {'#1a2744' if t < 0.6 else 'white'}")
+        return result
+
+    styled = (
         display_stats.style
-        .background_gradient(subset=["근무일수"], cmap="Blues", vmin=0)
-        .background_gradient(subset=["야간근무"], cmap="Purples", vmin=0)
-        .background_gradient(subset=["연차사용(일)"], cmap="YlOrBr", vmin=0)
-        .background_gradient(subset=["병가(일)"], cmap="Reds", vmin=0)
-        .format({"연차사용(일)":"{:.1f}","연차잔여(일)":"{:.1f}"}),
-        use_container_width=True, height=400
+        .apply(lambda s: color_scale(s, "#dbeafe", "#1d4ed8"), subset=["근무일수"])
+        .apply(lambda s: color_scale(s, "#ede9fe", "#6d28d9"), subset=["야간근무"])
+        .apply(lambda s: color_scale(s, "#fef3c7", "#d97706"), subset=["연차사용(일)"])
+        .apply(lambda s: color_scale(s, "#fee2e2", "#dc2626"), subset=["병가(일)"])
+        .format({"연차사용(일)": "{:.1f}", "연차잔여(일)": "{:.1f}"})
     )
+    st.dataframe(styled, use_container_width=True, height=400)
 
     # 개별 직원 상세
     st.markdown('<div class="section-header">🔎 개별 직원 상세</div>', unsafe_allow_html=True)
